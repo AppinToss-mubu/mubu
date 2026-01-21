@@ -1,4 +1,4 @@
-package org.example.mubu;
+package com.example.mubu;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

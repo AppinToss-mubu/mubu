@@ -1,4 +1,69 @@
 package com.example.mubu.service;
 
+import com.example.mubu.dto.ai.GeminiAnalyzeResult;
+import com.example.mubu.dto.ai.PriceCompareResult;
+import com.example.mubu.dto.naver.NaverShoppingItem;
+import com.example.mubu.exception.PriceCompareException;
+import org.springframework.stereotype.Service;
+
+//핵심 로직
+@Service
 public class PriceCompareCoreService {
+
+    private final AiAnalyzeService aiAnalyzeService;
+    private final NaverShoppingService naverShoppingService;
+
+    public PriceCompareCoreService(
+            AiAnalyzeService aiAnalyzeService,
+            NaverShoppingService naverShoppingService
+    ) {
+        this.aiAnalyzeService = aiAnalyzeService;
+        this.naverShoppingService = naverShoppingService;
+    }
+
+    // 이미지 바이트 기반 가격 비교
+    // Facade / 확장 API에서 공통 사용
+    public PriceCompareResult compareByImageBytes(
+            byte[] imageBytes,
+            String mimeType
+    ) {
+
+        // 1. AI로 상품명 추출
+        GeminiAnalyzeResult aiResult =
+                aiAnalyzeService.analyze(imageBytes, mimeType);
+
+        if (aiResult == null || aiResult.getText() == null) {
+            throw new PriceCompareException("상품 인식에 실패했습니다.");
+        }
+
+        // 2. 네이버 쇼핑 최저가 조회
+        NaverShoppingItem lowestItem =
+                naverShoppingService.findLowestPriceItem(
+                        aiResult.getText()
+                );
+
+        if (lowestItem == null) {
+            throw new PriceCompareException("최저가 상품을 찾을 수 없습니다.");
+        }
+
+        // 3. 응답 DTO 조합
+        return new PriceCompareResult(
+                aiResult.getText(),
+                lowestItem.getTitle(),
+                Integer.parseInt(lowestItem.getLprice()),
+                lowestItem.getMallName(),
+                lowestItem.getLink(),
+                lowestItem.getImage()
+        );
+    }
+
+    // 확장/표준 API용 메서드
+    // imageId 기반 비교 (추후 구현)
+    public PriceCompareResult compareByImageId(
+            String imageId
+    ) {
+        throw new UnsupportedOperationException(
+                "imageId 기반 비교는 아직 구현되지 않았습니다."
+        );
+    }
 }

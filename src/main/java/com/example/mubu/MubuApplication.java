@@ -1,4 +1,4 @@
-package com.mubu;
+package com.example.mubu;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
