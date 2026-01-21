@@ -30,6 +30,7 @@ public class PriceCompareSummaryService {
         int koreaPrice = compareResult.getLowestPrice();
 
         // 3. 절약 금액 계산
+        // (음수일 경우: 한국이 더 비쌈을 의미)
         int savedAmount = localPriceKrw - koreaPrice;
 
         // 4. 요약 문구 생성
@@ -42,9 +43,11 @@ public class PriceCompareSummaryService {
             summary = "한국과 현지 가격이 동일합니다.";
         }
 
+        // savedAmount는 의미 보존을 위해 그대로 반환
+        // (API는 사실만 전달, 해석은 summary 문자열이 담당)
         return new PriceCompareSummaryResponse(
                 summary,
-                Math.max(savedAmount, 0),
+                savedAmount,
                 localPriceKrw,
                 koreaPrice
         );
