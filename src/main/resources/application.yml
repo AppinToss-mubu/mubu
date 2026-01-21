@@ -2,6 +2,14 @@ spring:
   application:
     name: mubu-backend
 
+  servlet:
+    multipart:
+      # 업로드 가능한 단일 이미지 최대 크기
+      max-file-size: 10MB
+
+      # 요청 전체 최대 크기
+      max-request-size: 10MB
+
 server:
   port: 8080
 
@@ -14,4 +22,3 @@ mubu:
   naver:
     client-id: ${NAVER_CLIENT_ID}
     client-secret: ${NAVER_CLIENT_SECRET}
-
