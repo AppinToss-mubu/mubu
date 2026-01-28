@@ -12,6 +12,14 @@ public class PriceCompareResult {
     @Schema(description = "가격 비교 결과 식별용 imageId")
     private String imageId;
 
+    // AI가 인식한 현지 가격 (있을 때만 내려감, 없으면 null)
+    @Schema(description = "AI가 인식한 현지 가격", example = "27")
+    private Integer localPrice;
+
+    // AI가 인식한 현지 통화 코드 (예: THB, JPY), 없으면 null
+    @Schema(description = "AI가 인식한 현지 통화 코드", example = "THB")
+    private String localCurrency;
+
     // AI 분석 원문 텍스트
     @Schema(description = "AI가 인식한 상품명 원문")
     private final String aiText;
@@ -55,5 +63,15 @@ public class PriceCompareResult {
     // imageId 주입용 setter
     public void setImageId(String imageId) {
         this.imageId = imageId;
+    }
+
+    // 현지 가격 주입용 setter (선택값)
+    public void setLocalPrice(Integer localPrice) {
+        this.localPrice = localPrice;
+    }
+
+    // 현지 통화 코드 주입용 setter (선택값)
+    public void setLocalCurrency(String localCurrency) {
+        this.localCurrency = localCurrency;
     }
 }

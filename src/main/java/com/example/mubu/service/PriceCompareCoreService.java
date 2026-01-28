@@ -47,7 +47,7 @@ public class PriceCompareCoreService {
         }
 
         // 3. 응답 DTO 조합
-        return new PriceCompareResult(
+        PriceCompareResult result = new PriceCompareResult(
                 aiResult.getText(),
                 lowestItem.getTitle(),
                 Integer.parseInt(lowestItem.getLprice()),
@@ -55,6 +55,13 @@ public class PriceCompareCoreService {
                 lowestItem.getLink(),
                 lowestItem.getImage()
         );
+
+        // 4. AI가 텍스트에서 인식한 현지 가격/통화가 있다면 함께 내려준다
+        //    (없으면 null 그대로 유지)
+        result.setLocalPrice(aiResult.getLocalPrice());
+        result.setLocalCurrency(aiResult.getLocalCurrency());
+
+        return result;
     }
 
     // 확장/표준 API용 메서드

@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(
                         "http://localhost:5173",
+                        "http://localhost:5174",
                         "http://localhost:3000",
                         "https://*.apps.tossmini.com",
                         "https://*.private-apps.tossmini.com"
