@@ -45,9 +45,9 @@ public class GeminiClient {
                         apiKey.substring(0, 10) + "..."
         );
 
-        // burst limit 방지 - 1초 대기
+        // burst limit 방지 - 2초 대기
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -72,7 +72,7 @@ public class GeminiClient {
                 // 429 Too Many Requests 에러 처리
                 if (e.getStatusCode().value() == 429) {
                     if (i < maxRetries - 1) {
-                        int waitTime = (i + 1) * 2000; // 2초, 4초, 6초 대기
+                        int waitTime = (i + 1) * 5000; // 5초, 10초, 15초 대기
                         System.out.println(
                                 "429 에러 발생. " + waitTime + "ms 후 재시도 (" + (i + 1) + "/" + maxRetries + ")"
                         );
