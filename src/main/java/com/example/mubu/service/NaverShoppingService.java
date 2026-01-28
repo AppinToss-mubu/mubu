@@ -35,24 +35,22 @@ public class NaverShoppingService {
         
         NaverShoppingItem result = searchWithQuery(query);
         
-        // 결과 관련성 체크 - title에 키워드 일부가 포함되어 있는지
+        // 결과 관련성 체크 - 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
         if (result != null) {
             String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
             String[] keywords = query.split("\\s+");
             
             boolean isRelevant = false;
-            for (String kw : keywords) {
-                if (kw.length() > 1 && firstTitle.contains(kw.toLowerCase())) {
-                    isRelevant = true;
-                    break;
-                }
+            // 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
+            if (keywords.length > 0 && keywords[0].length() > 1) {
+                isRelevant = firstTitle.contains(keywords[0].toLowerCase());
             }
             
             if (!isRelevant) {
-                System.out.println("[NAVER_SEARCH] 관련성 낮음, 첫 번째 결과: " + result.getTitle());
+                System.out.println("[NAVER_SEARCH] 관련성 낮음 (첫 번째 키워드 '" + keywords[0] + "' 없음), 첫 번째 결과: " + result.getTitle());
                 result = null; // 관련성 없으면 null로 설정하여 재시도
             } else {
-                System.out.println("[NAVER_SEARCH] 관련성 확인됨: " + result.getTitle());
+                System.out.println("[NAVER_SEARCH] 관련성 확인됨 (첫 번째 키워드 '" + keywords[0] + "' 포함): " + result.getTitle());
                 return result; // 관련성 있으면 반환
             }
         }
@@ -65,19 +63,20 @@ public class NaverShoppingService {
                 System.out.println("[NAVER_SEARCH] 2단어 재시도: " + twoWordQuery);
                 result = searchWithQuery(twoWordQuery);
                 
-                // 2단어 재시도 결과도 관련성 체크
+                // 2단어 재시도 결과도 관련성 체크 - 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
                 if (result != null) {
                     String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
                     String[] twoWords = twoWordQuery.split("\\s+");
                     boolean isRelevant = false;
-                    for (String kw : twoWords) {
-                        if (kw.length() > 1 && firstTitle.contains(kw.toLowerCase())) {
-                            isRelevant = true;
-                            break;
-                        }
+                    // 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
+                    if (twoWords.length > 0 && twoWords[0].length() > 1) {
+                        isRelevant = firstTitle.contains(twoWords[0].toLowerCase());
                     }
                     if (!isRelevant) {
+                        System.out.println("[NAVER_SEARCH] 2단어 재시도 결과도 관련성 낮음 (첫 번째 키워드 '" + twoWords[0] + "' 없음)");
                         result = null;
+                    } else {
+                        System.out.println("[NAVER_SEARCH] 2단어 재시도 결과 관련성 확인됨 (첫 번째 키워드 '" + twoWords[0] + "' 포함)");
                     }
                 }
             }
