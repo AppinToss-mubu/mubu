@@ -158,15 +158,29 @@ public class NaverShoppingService {
         }
     }
 
-    // 영문 단어 추출
+    // 영문 단어 추출 - 상품명 라인에서만 추출
     private String extractEnglishWords(String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
+        
+        // "상품명:" 라인만 추출
+        String productLine = text;
+        if (text.contains("상품명:")) {
+            String[] lines = text.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("상품명:")) {
+                    productLine = line.replace("상품명:", "").trim();
+                    break;
+                }
+            }
+        }
+        
         StringBuilder sb = new StringBuilder();
-        for (String word : text.split("\\s+")) {
+        for (String word : productLine.split("\\s+")) {
             // 영문만 포함된 단어 추출 (최소 2글자 이상)
-            if (word.matches("[a-zA-Z]{2,}")) {
+            // 숫자나 통화코드(THB, USD 등) 제외
+            if (word.matches("[a-zA-Z]{2,}") && !word.matches("(?i)(THB|USD|KRW|JPY|EUR|CNY|SGD|PHP|IDR|VND|HKD|TWD|AUD|CAD|GBP|CHF)")) {
                 sb.append(word).append(" ");
             }
         }
