@@ -47,9 +47,9 @@ public class PriceCompareCoreService {
 
         System.out.println("[COMPARE] 최종 검색어: " + searchKeyword);
 
-        // 2. 네이버 쇼핑 최저가 조회
+        // 2. 네이버 쇼핑 최저가 조회 (원본 상품명도 전달하여 관련성 체크 및 fallback 사용)
         NaverShoppingItem lowestItem =
-                naverShoppingService.findLowestPriceItem(searchKeyword);
+                naverShoppingService.findLowestPriceItem(searchKeyword, aiResult.getText());
 
         System.out.println("[COMPARE] 네이버 결과: " + (lowestItem != null ? lowestItem.getTitle() + " - " + lowestItem.getLprice() : "null"));
 

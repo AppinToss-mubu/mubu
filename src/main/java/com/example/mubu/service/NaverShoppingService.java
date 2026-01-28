@@ -22,18 +22,75 @@ public class NaverShoppingService {
 
     // 네이버 쇼핑 검색 후 최저가 상품 1개 반환
     public NaverShoppingItem findLowestPriceItem(String query) {
+        return findLowestPriceItem(query, null);
+    }
+
+    // 네이버 쇼핑 검색 후 최저가 상품 1개 반환 (원본 상품명 포함)
+    public NaverShoppingItem findLowestPriceItem(String query, String originalProductName) {
         // 검색어 로깅 추가
         System.out.println("[NAVER_SEARCH] 검색어: " + query);
+        if (originalProductName != null) {
+            System.out.println("[NAVER_SEARCH] 원본 상품명: " + originalProductName);
+        }
         
         NaverShoppingItem result = searchWithQuery(query);
         
-        // 결과 없으면 2단어로 재시도
+        // 결과 관련성 체크 - title에 키워드 일부가 포함되어 있는지
+        if (result != null) {
+            String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
+            String[] keywords = query.split("\\s+");
+            
+            boolean isRelevant = false;
+            for (String kw : keywords) {
+                if (kw.length() > 1 && firstTitle.contains(kw.toLowerCase())) {
+                    isRelevant = true;
+                    break;
+                }
+            }
+            
+            if (!isRelevant) {
+                System.out.println("[NAVER_SEARCH] 관련성 낮음, 첫 번째 결과: " + result.getTitle());
+                result = null; // 관련성 없으면 null로 설정하여 재시도
+            } else {
+                System.out.println("[NAVER_SEARCH] 관련성 확인됨: " + result.getTitle());
+                return result; // 관련성 있으면 반환
+            }
+        }
+        
+        // 결과 없거나 관련성 낮으면 2단어로 재시도
         if (result == null && query.contains(" ")) {
             String[] words = query.split("\\s+");
             if (words.length >= 2) {
                 String twoWordQuery = words[0] + " " + words[1];
                 System.out.println("[NAVER_SEARCH] 2단어 재시도: " + twoWordQuery);
                 result = searchWithQuery(twoWordQuery);
+                
+                // 2단어 재시도 결과도 관련성 체크
+                if (result != null) {
+                    String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
+                    String[] twoWords = twoWordQuery.split("\\s+");
+                    boolean isRelevant = false;
+                    for (String kw : twoWords) {
+                        if (kw.length() > 1 && firstTitle.contains(kw.toLowerCase())) {
+                            isRelevant = true;
+                            break;
+                        }
+                    }
+                    if (!isRelevant) {
+                        result = null;
+                    }
+                }
+            }
+        }
+        
+        // 관련성 없으면 영문 브랜드명으로 재시도
+        if (result == null && originalProductName != null) {
+            String englishBrand = extractEnglishWords(originalProductName);
+            if (!englishBrand.isEmpty()) {
+                String productType = getProductType(query);
+                String fallbackKeyword = englishBrand + (productType.isEmpty() ? "" : " " + productType);
+                System.out.println("[NAVER_SEARCH] Fallback 검색어: " + fallbackKeyword);
+                result = searchWithQuery(fallbackKeyword);
             }
         }
         
@@ -88,6 +145,11 @@ public class NaverShoppingService {
         return item;
     }
 
+    // Title에서 HTML 태그 제거 (문자열만 반환)
+    private String sanitizeTitle(String title) {
+        return title.replaceAll("<[^>]*>", "");
+    }
+
     // 가격 파싱
     private int parsePrice(String price) {
         try {
@@ -95,5 +157,36 @@ public class NaverShoppingService {
         } catch (Exception e) {
             return -1;
         }
+    }
+
+    // 영문 단어 추출
+    private String extractEnglishWords(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String word : text.split("\\s+")) {
+            // 영문만 포함된 단어 추출 (최소 2글자 이상)
+            if (word.matches("[a-zA-Z]{2,}")) {
+                sb.append(word).append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    // 한글 상품 유형 추출 (치약, 과자 등)
+    private String getProductType(String keyword) {
+        if (keyword == null || keyword.isEmpty()) {
+            return "";
+        }
+        String[] words = keyword.split("\\s+");
+        if (words.length > 0) {
+            String lastWord = words[words.length - 1];
+            // 마지막 단어가 한글이면 상품 유형으로 간주
+            if (lastWord.matches(".*[가-힣].*")) {
+                return lastWord;
+            }
+        }
+        return "";
     }
 }
