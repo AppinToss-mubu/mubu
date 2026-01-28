@@ -63,27 +63,48 @@ public class GeminiAnalyzeResult {
 
         String text = result.toString();
 
-        // 5. 텍스트 안에서 "숫자 + 통화 코드" 패턴을 간단히 파싱
-        //    - 예: "27 THB", "1,200 JPY"
-        Pattern pattern = Pattern.compile(
-                "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(THB|JPY|USD|CNY|EUR|KRW|SGD|PHP|IDR|VND|HKD|TWD|AUD|CAD|GBP|CHF)",
-                Pattern.CASE_INSENSITIVE
-        );
-        Matcher matcher = pattern.matcher(text);
-
         Integer localPrice = null;
         String localCurrency = null;
 
-        if (matcher.find()) {
-            String amountText = matcher.group(1).replace(",", "");
+        // 5-1. 새 프롬프트 형식 파싱: "가격: 27 THB" 형식
+        Pattern priceLinePattern = Pattern.compile(
+                "가격:\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*(THB|JPY|USD|CNY|EUR|KRW|SGD|PHP|IDR|VND|HKD|TWD|AUD|CAD|GBP|CHF)",
+                Pattern.CASE_INSENSITIVE
+        );
+        Matcher priceMatcher = priceLinePattern.matcher(text);
+
+        if (priceMatcher.find()) {
+            // 새 형식 파싱 성공
+            String amountText = priceMatcher.group(1).replace(",", "");
             try {
                 double parsed = Double.parseDouble(amountText);
                 localPrice = (int) parsed;
-                localCurrency = matcher.group(2).toUpperCase();
+                localCurrency = priceMatcher.group(2).toUpperCase();
             } catch (NumberFormatException ignored) {
                 // 가격 파싱에 실패한 경우에는 현지 가격 정보를 사용하지 않는다.
                 localPrice = null;
                 localCurrency = null;
+            }
+        } else {
+            // 5-2. 기존 형식 fallback: 텍스트 안에서 "숫자 + 통화 코드" 패턴 파싱
+            //    - 예: "27 THB", "1,200 JPY"
+            Pattern pattern = Pattern.compile(
+                    "(\\d[\\d,]*(?:\\.\\d+)?)\\s*(THB|JPY|USD|CNY|EUR|KRW|SGD|PHP|IDR|VND|HKD|TWD|AUD|CAD|GBP|CHF)",
+                    Pattern.CASE_INSENSITIVE
+            );
+            Matcher matcher = pattern.matcher(text);
+
+            if (matcher.find()) {
+                String amountText = matcher.group(1).replace(",", "");
+                try {
+                    double parsed = Double.parseDouble(amountText);
+                    localPrice = (int) parsed;
+                    localCurrency = matcher.group(2).toUpperCase();
+                } catch (NumberFormatException ignored) {
+                    // 가격 파싱에 실패한 경우에는 현지 가격 정보를 사용하지 않는다.
+                    localPrice = null;
+                    localCurrency = null;
+                }
             }
         }
 

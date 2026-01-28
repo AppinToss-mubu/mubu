@@ -36,11 +36,12 @@ public class PriceCompareCoreService {
             throw new PriceCompareException("상품 인식에 실패했습니다.");
         }
 
+        // 검색 키워드 정제 (추가)
+        String searchKeyword = extractProductName(aiResult.getText());
+
         // 2. 네이버 쇼핑 최저가 조회
         NaverShoppingItem lowestItem =
-                naverShoppingService.findLowestPriceItem(
-                        aiResult.getText()
-                );
+                naverShoppingService.findLowestPriceItem(searchKeyword);
 
         if (lowestItem == null) {
             throw new PriceCompareException("최저가 상품을 찾을 수 없습니다.");
@@ -72,5 +73,22 @@ public class PriceCompareCoreService {
         throw new UnsupportedOperationException(
                 "imageId 기반 비교는 아직 구현되지 않았습니다."
         );
+    }
+
+    // 검색 키워드 정제 메서드
+    // "상품명: xxx" 형식에서 xxx만 추출
+    private String extractProductName(String aiText) {
+        // "상품명: xxx" 형식에서 xxx만 추출
+        if (aiText.contains("상품명:")) {
+            String[] lines = aiText.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("상품명:")) {
+                    return line.replace("상품명:", "").trim();
+                }
+            }
+        }
+        // 형식이 안 맞으면 원본 사용 (첫 줄만)
+        String[] lines = aiText.split("\n");
+        return lines.length > 0 ? lines[0].trim() : aiText.trim();
     }
 }

@@ -22,10 +22,17 @@ public class NaverShoppingService {
 
     // 네이버 쇼핑 검색 후 최저가 상품 1개 반환
     public NaverShoppingItem findLowestPriceItem(String query) {
+        // 검색어 로깅 추가
+        System.out.println("[NAVER_SEARCH] 검색어: " + query);
 
         // 네이버 쇼핑 API 호출
         NaverShoppingResponse response =
                 naverShoppingClient.search(query, 20, "asc");
+
+        // 결과 로깅 추가
+        int resultCount = (response != null && response.getItems() != null)
+                ? response.getItems().size() : 0;
+        System.out.println("[NAVER_SEARCH] 결과 수: " + resultCount);
 
         if (response == null ||
                 response.getItems() == null ||

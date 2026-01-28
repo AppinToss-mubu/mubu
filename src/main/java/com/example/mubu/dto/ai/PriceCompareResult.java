@@ -1,14 +1,18 @@
 package com.example.mubu.dto.ai;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 // AI 분석 + 가격 비교 통합 결과 DTO
 @Getter
+@JsonInclude(JsonInclude.Include.ALWAYS)
 @Schema(description = "AI 분석 결과와 최저가 정보를 포함한 가격 비교 결과")
 public class PriceCompareResult {
 
     // Summary API 연계를 위한 이미지 식별자
+    @JsonProperty("imageId")
     @Schema(description = "가격 비교 결과 식별용 imageId")
     private String imageId;
 

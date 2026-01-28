@@ -22,17 +22,26 @@ public class AiAnalyzeService {
         this.geminiRequestFactory = geminiRequestFactory;
     }
 
-    // 이미지 기반 상품명 한 줄 추출
+    // 이미지 기반 상품명 + (가능하다면) 현지 가격/통화 정보 추출
     public GeminiAnalyzeResult analyze(
             byte[] imageBytes,
             String mimeType
     ) {
 
         // 가격 비교용 고정 프롬프트
+        // - 구조화된 형식으로 응답하여 파싱 성공률 향상
         String prompt = """
-        이 이미지에 나온 상품의
-        브랜드명과 정확한 상품명을
-        검색에 적합한 한 줄로 알려줘
+        이 이미지에 나온 상품을 분석해줘.
+        응답 형식 (반드시 이 형식으로만 답변):
+        상품명: [브랜드 + 제품명, 검색에 적합한 간결한 한 줄]
+        가격: [숫자] [통화코드]
+        예시:
+        상품명: 세븐일레븐 소시지치즈샌드위치
+        가격: 27 THB
+        주의사항:
+        - 상품명은 한국어로 번역하거나 영문 그대로 유지
+        - 불필요한 설명 없이 위 형식만 출력
+        - 가격이 보이지 않으면 "가격: 없음" 으로 표기
         """;
 
         // Gemini 요청 DTO 생성

@@ -66,7 +66,10 @@ public class PriceCompareController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public PriceCompareResult compareWithImage(
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            // [ADD] Web / 외부앱에서 자체 생성한 imageId를 함께 보낼 수 있도록 선택 파라미터 추가
+            //       - 없으면 서버에서 UUID 생성
+            @RequestParam(value = "imageId", required = false) String clientImageId
     ) throws Exception {
 
         // MultipartFile → byte[]
@@ -80,7 +83,11 @@ public class PriceCompareController {
                 priceCompareFacadeService.compareWithImage(imageBytes, mimeType);
 
         // [ADD] Summary API 연계를 위한 imageId 생성
-        String imageId = UUID.randomUUID().toString();
+        //      - 클라이언트가 전달한 imageId가 있으면 그대로 사용
+        //      - 없으면 서버에서 UUID 생성
+        String imageId = (clientImageId != null && !clientImageId.isBlank())
+                ? clientImageId
+                : UUID.randomUUID().toString();
 
         // [ADD] imageId를 결과에 주입
         result.setImageId(imageId);
