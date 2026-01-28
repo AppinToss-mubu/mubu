@@ -5,7 +5,6 @@ import com.example.mubu.dto.naver.NaverShoppingItem;
 import com.example.mubu.dto.naver.NaverShoppingResponse;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.Comparator;
 
 
@@ -28,21 +27,17 @@ public class NaverShoppingService {
         
         NaverShoppingItem result = searchWithQuery(query);
         
-        // 결과 없으면 키워드 단순화 후 재시도
+        // 결과 없으면 2단어로 재시도
         if (result == null && query.contains(" ")) {
-            String simplifiedQuery = simplifyQuery(query);
-            System.out.println("[NAVER_SEARCH] 재시도 검색어: " + simplifiedQuery);
-            result = searchWithQuery(simplifiedQuery);
+            String[] words = query.split("\\s+");
+            if (words.length >= 2) {
+                String twoWordQuery = words[0] + " " + words[1];
+                System.out.println("[NAVER_SEARCH] 2단어 재시도: " + twoWordQuery);
+                result = searchWithQuery(twoWordQuery);
+            }
         }
         
         return result;
-    }
-
-    // 검색어 단순화 (앞 2~3 단어만)
-    private String simplifyQuery(String query) {
-        String[] words = query.split("\\s+");
-        int limit = Math.min(3, words.length);
-        return String.join(" ", Arrays.copyOf(words, limit));
     }
 
     // 실제 검색 로직 (재사용 가능하도록 분리)
@@ -61,6 +56,19 @@ public class NaverShoppingService {
                 response.getItems().isEmpty()) {
             return null;
         }
+
+        // 첫 번째 아이템 디버그
+        if (resultCount > 0) {
+            var firstItem = response.getItems().get(0);
+            System.out.println("[NAVER_SEARCH] 첫 번째 아이템 - title: " + firstItem.getTitle() + ", lprice: " + firstItem.getLprice());
+        }
+
+        // 가격 있는 아이템 수 확인
+        long validCount = response.getItems().stream()
+                .filter(item -> item.getLprice() != null && !item.getLprice().isBlank())
+                .filter(item -> parsePrice(item.getLprice()) > 0)
+                .count();
+        System.out.println("[NAVER_SEARCH] 가격 유효 아이템 수: " + validCount);
 
         return response.getItems().stream()
                 // 가격 없는 상품 제외

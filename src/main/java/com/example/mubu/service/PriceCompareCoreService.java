@@ -32,6 +32,9 @@ public class PriceCompareCoreService {
         GeminiAnalyzeResult aiResult =
                 aiAnalyzeService.analyze(imageBytes, mimeType);
 
+        System.out.println("[COMPARE] AI 분석 결과: " + (aiResult != null ? aiResult.getText() : "null"));
+        System.out.println("[COMPARE] searchKeywordKr: " + (aiResult != null ? aiResult.getSearchKeywordKr() : "null"));
+
         if (aiResult == null || aiResult.getText() == null) {
             throw new PriceCompareException("상품 인식에 실패했습니다.");
         }
@@ -42,9 +45,13 @@ public class PriceCompareCoreService {
                 ? aiResult.getSearchKeywordKr()
                 : extractProductName(aiResult.getText());
 
+        System.out.println("[COMPARE] 최종 검색어: " + searchKeyword);
+
         // 2. 네이버 쇼핑 최저가 조회
         NaverShoppingItem lowestItem =
                 naverShoppingService.findLowestPriceItem(searchKeyword);
+
+        System.out.println("[COMPARE] 네이버 결과: " + (lowestItem != null ? lowestItem.getTitle() + " - " + lowestItem.getLprice() : "null"));
 
         // 검색 결과가 없어도 성공 응답 반환
         if (lowestItem == null) {
