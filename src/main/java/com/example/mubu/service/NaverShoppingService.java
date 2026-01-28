@@ -5,6 +5,7 @@ import com.example.mubu.dto.naver.NaverShoppingItem;
 import com.example.mubu.dto.naver.NaverShoppingResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.Comparator;
 
 
@@ -24,7 +25,28 @@ public class NaverShoppingService {
     public NaverShoppingItem findLowestPriceItem(String query) {
         // 검색어 로깅 추가
         System.out.println("[NAVER_SEARCH] 검색어: " + query);
+        
+        NaverShoppingItem result = searchWithQuery(query);
+        
+        // 결과 없으면 키워드 단순화 후 재시도
+        if (result == null && query.contains(" ")) {
+            String simplifiedQuery = simplifyQuery(query);
+            System.out.println("[NAVER_SEARCH] 재시도 검색어: " + simplifiedQuery);
+            result = searchWithQuery(simplifiedQuery);
+        }
+        
+        return result;
+    }
 
+    // 검색어 단순화 (앞 2~3 단어만)
+    private String simplifyQuery(String query) {
+        String[] words = query.split("\\s+");
+        int limit = Math.min(3, words.length);
+        return String.join(" ", Arrays.copyOf(words, limit));
+    }
+
+    // 실제 검색 로직 (재사용 가능하도록 분리)
+    private NaverShoppingItem searchWithQuery(String query) {
         // 네이버 쇼핑 API 호출
         NaverShoppingResponse response =
                 naverShoppingClient.search(query, 20, "asc");
