@@ -1,6 +1,7 @@
 package com.example.mubu.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -27,28 +28,78 @@ public class ExchangeRateService {
             return amount;
         }
 
+        // 지원 안 되는 통화 fallback (고정 환율)
+        // Frankfurter API는 ECB 데이터 기반이라 VND, TWD 등 일부 통화 미지원
+        Double fallbackRate = getFallbackRate(currency);
+        if (fallbackRate != null) {
+            System.out.println(
+                    "[EXCHANGE_RATE] " + currency + " → KRW = " + fallbackRate + " (fallback 사용)"
+            );
+            return (int) (amount * fallbackRate);
+        }
+
         // Frankfurter API 호출
         String url = String.format(API_URL, currency, "KRW");
 
-        FrankfurterResponse response =
-                restTemplate.getForObject(url, FrankfurterResponse.class);
+        try {
+            FrankfurterResponse response =
+                    restTemplate.getForObject(url, FrankfurterResponse.class);
 
-        // 방어 코드 (API 장애 대비)
-        if (response == null
-                || response.getRates() == null
-                || !response.getRates().containsKey("KRW")) {
-            throw new IllegalStateException("환율 정보를 가져올 수 없습니다.");
+            // 방어 코드 (API 장애 대비)
+            if (response == null
+                    || response.getRates() == null
+                    || !response.getRates().containsKey("KRW")) {
+                throw new IllegalStateException("환율 정보를 가져올 수 없습니다.");
+            }
+
+            double rate = response.getRates().get("KRW");
+
+            // 🔍 환율 API 실제 호출 확인용 로그
+            System.out.println(
+                    "[EXCHANGE_RATE] " + currency + " → KRW = " + rate
+            );
+
+            // 소수점 버림 (UX 단순화)
+            return (int) (amount * rate);
+        } catch (RestClientException e) {
+            // API 호출 실패 시 (404 등) fallback 재시도
+            Double retryFallbackRate = getFallbackRate(currency);
+            if (retryFallbackRate != null) {
+                System.out.println(
+                        "[EXCHANGE_RATE] API 실패, " + currency + " → KRW = " + retryFallbackRate + " (fallback 사용)"
+                );
+                return (int) (amount * retryFallbackRate);
+            }
+            throw new IllegalStateException("환율 정보를 가져올 수 없습니다: " + e.getMessage());
         }
+    }
 
-        double rate = response.getRates().get("KRW");
-
-        // 🔍 환율 API 실제 호출 확인용 로그
-        System.out.println(
-                "[EXCHANGE_RATE] " + currency + " → KRW = " + rate
-        );
-
-        // 소수점 버림 (UX 단순화)
-        return (int) (amount * rate);
+    /**
+     * 지원 안 되는 통화에 대한 고정 환율 반환
+     * - VND, TWD 등 Frankfurter API에서 지원하지 않는 통화
+     * - 환율은 대략적인 값이며, 필요시 주기적으로 업데이트 필요
+     * 
+     * @param currency 통화 코드
+     * @return 환율 (없으면 null)
+     */
+    private Double getFallbackRate(String currency) {
+        if (currency == null) {
+            return null;
+        }
+        
+        String upperCurrency = currency.toUpperCase();
+        
+        // VND (베트남 동): 1 VND ≈ 0.057 KRW
+        if ("VND".equals(upperCurrency)) {
+            return 0.057;
+        }
+        
+        // TWD (대만 달러): 1 TWD ≈ 44 KRW
+        if ("TWD".equals(upperCurrency)) {
+            return 44.0;
+        }
+        
+        return null;
     }
 
     /**
