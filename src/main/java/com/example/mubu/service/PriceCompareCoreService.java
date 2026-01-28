@@ -37,14 +37,29 @@ public class PriceCompareCoreService {
         }
 
         // 검색 키워드 정제 (추가)
-        String searchKeyword = extractProductName(aiResult.getText());
+        // AI가 제공한 한국어 검색 키워드가 있으면 우선 사용, 없으면 상품명에서 추출
+        String searchKeyword = (aiResult.getSearchKeywordKr() != null && !aiResult.getSearchKeywordKr().isBlank())
+                ? aiResult.getSearchKeywordKr()
+                : extractProductName(aiResult.getText());
 
         // 2. 네이버 쇼핑 최저가 조회
         NaverShoppingItem lowestItem =
                 naverShoppingService.findLowestPriceItem(searchKeyword);
 
+        // 검색 결과가 없어도 성공 응답 반환
         if (lowestItem == null) {
-            throw new PriceCompareException("최저가 상품을 찾을 수 없습니다.");
+            PriceCompareResult result = new PriceCompareResult(
+                    aiResult.getText(),
+                    aiResult.getText(), // productName은 AI 분석 텍스트 사용
+                    0,  // lowestPrice = 0
+                    "", // mallName
+                    "", // link
+                    ""  // image
+            );
+            // AI가 인식한 현지 가격/통화 정보 설정
+            result.setLocalPrice(aiResult.getLocalPrice());
+            result.setLocalCurrency(aiResult.getLocalCurrency());
+            return result;
         }
 
         // 3. 응답 DTO 조합

@@ -20,10 +20,14 @@ public class GeminiAnalyzeResult {
     private final Integer localPrice;
     private final String localCurrency;
 
-    private GeminiAnalyzeResult(String text, Integer localPrice, String localCurrency) {
+    // 네이버 쇼핑 검색용 한국어 키워드 (예: "달리 치약", "포키 과자")
+    private final String searchKeywordKr;
+
+    private GeminiAnalyzeResult(String text, Integer localPrice, String localCurrency, String searchKeywordKr) {
         this.text = text;
         this.localPrice = localPrice;
         this.localCurrency = localCurrency;
+        this.searchKeywordKr = searchKeywordKr;
     }
 
     // Gemini API 응답을 서비스용 결과로 변환
@@ -33,7 +37,7 @@ public class GeminiAnalyzeResult {
         if (response == null ||
                 response.getCandidates() == null ||
                 response.getCandidates().isEmpty()) {
-            return new GeminiAnalyzeResult("분석 결과 없음", null, null);
+            return new GeminiAnalyzeResult("분석 결과 없음", null, null, null);
         }
 
         // Gemini는 여러 candidate를 줄 수 있으나,
@@ -43,7 +47,7 @@ public class GeminiAnalyzeResult {
         // 2. 모델 응답 content 또는 parts가 없는 경우
         if (candidate.getContent() == null ||
                 candidate.getContent().getParts() == null) {
-            return new GeminiAnalyzeResult("분석 결과 없음", null, null);
+            return new GeminiAnalyzeResult("분석 결과 없음", null, null, null);
         }
 
         StringBuilder result = new StringBuilder();
@@ -58,13 +62,14 @@ public class GeminiAnalyzeResult {
 
         // 4. text part가 하나도 없었던 경우에 대한 방어 처리
         if (result.length() == 0) {
-            return new GeminiAnalyzeResult("분석 결과 없음", null, null);
+            return new GeminiAnalyzeResult("분석 결과 없음", null, null, null);
         }
 
         String text = result.toString();
 
         Integer localPrice = null;
         String localCurrency = null;
+        String searchKeywordKr = null;
 
         // 5-1. 새 프롬프트 형식 파싱: "가격: 27 THB" 형식
         Pattern priceLinePattern = Pattern.compile(
@@ -108,6 +113,16 @@ public class GeminiAnalyzeResult {
             }
         }
 
-        return new GeminiAnalyzeResult(text, localPrice, localCurrency);
+        // 6. 한국어 검색 키워드 파싱: "searchKeywordKr: xxx" 형식
+        Pattern searchKeywordPattern = Pattern.compile(
+                "searchKeywordKr:\\s*(.+?)(?:\\n|$)",
+                Pattern.CASE_INSENSITIVE
+        );
+        Matcher searchKeywordMatcher = searchKeywordPattern.matcher(text);
+        if (searchKeywordMatcher.find()) {
+            searchKeywordKr = searchKeywordMatcher.group(1).trim();
+        }
+
+        return new GeminiAnalyzeResult(text, localPrice, localCurrency, searchKeywordKr);
     }
 }

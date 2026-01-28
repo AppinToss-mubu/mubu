@@ -4,6 +4,8 @@ import com.example.mubu.dto.gemini.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 //이미지(또는 이미지 정보)를 받아서 Gemini API에 요청하고 AI 응답을 Java 객체로 돌려준다
@@ -43,6 +45,13 @@ public class GeminiClient {
                         apiKey.substring(0, 10) + "..."
         );
 
+        // burst limit 방지 - 1초 대기
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         // Gemini는 Authorization 헤더 ❌
         // query param ?key=API_KEY 사용
         String url = BASE_URL
@@ -50,10 +59,44 @@ public class GeminiClient {
                 + ":generateContent"
                 + "?key=" + apiKey;
 
-        return restTemplate.postForObject(
-                url,
-                request,
-                GeminiResponse.class
-        );
+        // 429 에러 시 재시도 로직 (exponential backoff)
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                return restTemplate.postForObject(
+                        url,
+                        request,
+                        GeminiResponse.class
+                );
+            } catch (HttpClientErrorException e) {
+                // 429 Too Many Requests 에러 처리
+                if (e.getStatusCode().value() == 429) {
+                    if (i < maxRetries - 1) {
+                        int waitTime = (i + 1) * 2000; // 2초, 4초, 6초 대기
+                        System.out.println(
+                                "429 에러 발생. " + waitTime + "ms 후 재시도 (" + (i + 1) + "/" + maxRetries + ")"
+                        );
+                        try {
+                            Thread.sleep(waitTime);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("재시도 대기 중 인터럽트 발생", ie);
+                        }
+                    } else {
+                        System.out.println("최대 재시도 횟수 초과. 429 에러를 다시 던집니다.");
+                        throw e;
+                    }
+                } else {
+                    // 429가 아닌 다른 HTTP 에러는 즉시 던짐
+                    throw e;
+                }
+            } catch (RestClientException e) {
+                // RestClientException (네트워크 에러 등)은 재시도하지 않고 즉시 던짐
+                throw e;
+            }
+        }
+
+        // 이 코드는 실행되지 않아야 하지만, 컴파일러를 위한 fallback
+        throw new RuntimeException("예상치 못한 오류: 재시도 로직을 통과했습니다.");
     }
 }

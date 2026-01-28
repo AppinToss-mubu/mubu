@@ -35,11 +35,18 @@ public class AiAnalyzeService {
         응답 형식 (반드시 이 형식으로만 답변):
         상품명: [브랜드 + 제품명, 검색에 적합한 간결한 한 줄]
         가격: [숫자] [통화코드]
+        searchKeywordKr: [네이버 쇼핑 검색용 한국어 키워드]
         예시:
         상품명: 세븐일레븐 소시지치즈샌드위치
         가격: 27 THB
+        searchKeywordKr: 세븐일레븐 소시지치즈샌드위치
+        예시2:
+        상품명: Darli Toothpaste
+        가격: 45 THB
+        searchKeywordKr: 달리 치약
         주의사항:
         - 상품명은 한국어로 번역하거나 영문 그대로 유지
+        - searchKeywordKr은 반드시 한국어로 작성 (예: "달리 치약", "포키 과자")
         - 불필요한 설명 없이 위 형식만 출력
         - 가격이 보이지 않으면 "가격: 없음" 으로 표기
         """;
