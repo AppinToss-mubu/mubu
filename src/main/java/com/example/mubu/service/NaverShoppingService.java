@@ -98,9 +98,9 @@ public class NaverShoppingService {
 
     // 실제 검색 로직 (재사용 가능하도록 분리)
     private NaverShoppingItem searchWithQuery(String query) {
-        // 네이버 쇼핑 API 호출
+        // 네이버 쇼핑 API 호출 - 관련도순(sim)으로 검색 후 그 안에서 최저가 선택
         NaverShoppingResponse response =
-                naverShoppingClient.search(query, 20, "asc");
+                naverShoppingClient.search(query, 20, "sim");
 
         // 결과 로깅 추가
         int resultCount = (response != null && response.getItems() != null)
