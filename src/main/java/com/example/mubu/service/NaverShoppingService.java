@@ -6,6 +6,7 @@ import com.example.mubu.dto.naver.NaverShoppingResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.List;
 
 
 //title HTML 제거
@@ -32,77 +33,59 @@ public class NaverShoppingService {
         if (originalProductName != null) {
             System.out.println("[NAVER_SEARCH] 원본 상품명: " + originalProductName);
         }
-        
-        NaverShoppingItem result = searchWithQuery(query);
-        
-        // 결과 관련성 체크 - 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
+
+        String[] keywords = query.split("\\s+");
+        String firstKeyword = (keywords.length > 0 && keywords[0].length() > 1) ? keywords[0] : null;
+
+        // 1차 시도: 전체 키워드로 검색 (관련성 필터링 포함)
+        NaverShoppingItem result = searchWithQuery(query, firstKeyword);
+
         if (result != null) {
-            String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
-            String[] keywords = query.split("\\s+");
-            
-            boolean isRelevant = false;
-            // 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
-            if (keywords.length > 0 && keywords[0].length() > 1) {
-                isRelevant = firstTitle.contains(keywords[0].toLowerCase());
-            }
-            
-            if (!isRelevant) {
-                System.out.println("[NAVER_SEARCH] 관련성 낮음 (첫 번째 키워드 '" + keywords[0] + "' 없음), 첫 번째 결과: " + result.getTitle());
-                result = null; // 관련성 없으면 null로 설정하여 재시도
-            } else {
-                System.out.println("[NAVER_SEARCH] 관련성 확인됨 (첫 번째 키워드 '" + keywords[0] + "' 포함): " + result.getTitle());
-                return result; // 관련성 있으면 반환
+            System.out.println("[NAVER_SEARCH] 관련 상품 찾음: " + result.getTitle());
+            return result;
+        }
+
+        // 2차 시도: 2단어로 재시도
+        if (query.contains(" ") && keywords.length >= 2) {
+            String twoWordQuery = keywords[0] + " " + keywords[1];
+            System.out.println("[NAVER_SEARCH] 2단어 재시도: " + twoWordQuery);
+            result = searchWithQuery(twoWordQuery, firstKeyword);
+
+            if (result != null) {
+                System.out.println("[NAVER_SEARCH] 2단어 재시도 성공: " + result.getTitle());
+                return result;
             }
         }
-        
-        // 결과 없거나 관련성 낮으면 2단어로 재시도
-        if (result == null && query.contains(" ")) {
-            String[] words = query.split("\\s+");
-            if (words.length >= 2) {
-                String twoWordQuery = words[0] + " " + words[1];
-                System.out.println("[NAVER_SEARCH] 2단어 재시도: " + twoWordQuery);
-                result = searchWithQuery(twoWordQuery);
-                
-                // 2단어 재시도 결과도 관련성 체크 - 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
-                if (result != null) {
-                    String firstTitle = sanitizeTitle(result.getTitle()).toLowerCase();
-                    String[] twoWords = twoWordQuery.split("\\s+");
-                    boolean isRelevant = false;
-                    // 첫 번째 키워드(브랜드명)가 반드시 포함되어야 함
-                    if (twoWords.length > 0 && twoWords[0].length() > 1) {
-                        isRelevant = firstTitle.contains(twoWords[0].toLowerCase());
-                    }
-                    if (!isRelevant) {
-                        System.out.println("[NAVER_SEARCH] 2단어 재시도 결과도 관련성 낮음 (첫 번째 키워드 '" + twoWords[0] + "' 없음)");
-                        result = null;
-                    } else {
-                        System.out.println("[NAVER_SEARCH] 2단어 재시도 결과 관련성 확인됨 (첫 번째 키워드 '" + twoWords[0] + "' 포함)");
-                    }
-                }
-            }
-        }
-        
-        // 관련성 없으면 영문 브랜드명으로 재시도
-        if (result == null && originalProductName != null) {
+
+        // 3차 시도: 영문 브랜드명으로 Fallback
+        if (originalProductName != null) {
             String englishBrand = extractEnglishWords(originalProductName);
             if (!englishBrand.isEmpty()) {
                 String productType = getProductType(query);
                 String fallbackKeyword = englishBrand + (productType.isEmpty() ? "" : " " + productType);
                 System.out.println("[NAVER_SEARCH] Fallback 검색어: " + fallbackKeyword);
-                result = searchWithQuery(fallbackKeyword);
+
+                String[] fallbackWords = englishBrand.split("\\s+");
+                String fallbackFirstKeyword = (fallbackWords.length > 0) ? fallbackWords[0] : null;
+                result = searchWithQuery(fallbackKeyword, fallbackFirstKeyword);
+
+                if (result != null) {
+                    System.out.println("[NAVER_SEARCH] Fallback 성공: " + result.getTitle());
+                    return result;
+                }
             }
         }
-        
-        return result;
+
+        System.out.println("[NAVER_SEARCH] 관련 상품을 찾지 못함 → lowestPrice=0 반환");
+        return null;
     }
 
-    // 실제 검색 로직 (재사용 가능하도록 분리)
-    private NaverShoppingItem searchWithQuery(String query) {
-        // 네이버 쇼핑 API 호출 - 관련도순(sim)으로 검색 후 그 안에서 최저가 선택
+    // 실제 검색 로직 (관련성 필터링 포함)
+    private NaverShoppingItem searchWithQuery(String query, String firstKeyword) {
+        // 네이버 쇼핑 API 호출 - 관련도순(sim)으로 검색
         NaverShoppingResponse response =
                 naverShoppingClient.search(query, 20, "sim");
 
-        // 결과 로깅 추가
         int resultCount = (response != null && response.getItems() != null)
                 ? response.getItems().size() : 0;
         System.out.println("[NAVER_SEARCH] 결과 수: " + resultCount);
@@ -119,21 +102,28 @@ public class NaverShoppingService {
             System.out.println("[NAVER_SEARCH] 첫 번째 아이템 - title: " + firstItem.getTitle() + ", lprice: " + firstItem.getLprice());
         }
 
-        // 가격 있는 아이템 수 확인
-        long validCount = response.getItems().stream()
+        // 1. 관련 상품만 필터링 (첫 번째 키워드가 포함된 것만)
+        List<NaverShoppingItem> relevantItems = response.getItems().stream()
                 .filter(item -> item.getLprice() != null && !item.getLprice().isBlank())
                 .filter(item -> parsePrice(item.getLprice()) > 0)
-                .count();
-        System.out.println("[NAVER_SEARCH] 가격 유효 아이템 수: " + validCount);
+                .filter(item -> {
+                    if (firstKeyword == null || firstKeyword.length() <= 1) {
+                        return true;
+                    }
+                    String title = sanitizeTitle(item.getTitle()).toLowerCase();
+                    return title.contains(firstKeyword.toLowerCase());
+                })
+                .toList();
 
-        return response.getItems().stream()
-                // 가격 없는 상품 제외
-                .filter(item -> item.getLprice() != null && !item.getLprice().isBlank())
-                // lprice 문자열 → int 변환
-                .filter(item -> parsePrice(item.getLprice()) > 0)
-                // 최저가 기준 정렬
+        System.out.println("[NAVER_SEARCH] 관련성 있는 아이템 수: " + relevantItems.size());
+        if (relevantItems.isEmpty()) {
+            System.out.println("[NAVER_SEARCH] 관련 상품 없음");
+            return null;
+        }
+
+        // 2. 관련 상품 중 최저가 선택
+        return relevantItems.stream()
                 .min(Comparator.comparingInt(item -> parsePrice(item.getLprice())))
-                // title HTML 태그 제거
                 .map(this::sanitizeItem)
                 .orElse(null);
     }
