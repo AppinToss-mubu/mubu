@@ -16,6 +16,9 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://localhost:3000",
                         "http://localhost:5000",
                         "http://localhost:5001",
+                        "http://localhost:5002",
+                        "http://192.168.0.*:*", //집
+                        "http://172.30.*:*", //카페
                         "https://*.replit.dev",
                         "https://*.repl.co",
                         "https://*.apps.tossmini.com",
