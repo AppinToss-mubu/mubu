@@ -1,6 +1,7 @@
 package com.example.mubu.service;
 
 import com.example.mubu.client.NaverShoppingClient;
+import com.example.mubu.common.util.MallLinkUtils;
 import com.example.mubu.dto.naver.NaverShoppingItem;
 import com.example.mubu.dto.naver.NaverShoppingResponse;
 import org.springframework.stereotype.Service;
@@ -128,9 +129,10 @@ public class NaverShoppingService {
                 .orElse(null);
     }
 
-    // HTML 태그 제거
+    // HTML 태그 제거 + 앱 딥링크를 웹 URL로 정규화 (토스 인앱 등에서 웹만 열 수 있도록)
     private NaverShoppingItem sanitizeItem(NaverShoppingItem item) {
         item.setTitle(item.getTitle().replaceAll("<[^>]*>", ""));
+        item.setLink(MallLinkUtils.normalizeToWebUrl(item.getLink()));
         return item;
     }
 
