@@ -36,16 +36,11 @@ public class GeminiClient {
     ) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
-
-        // 1. 애플리케이션 시작 시점에 한 번 출력
-        log.info("Gemini API Key loaded: {}...", apiKey.substring(0, Math.min(10, apiKey.length())));
+        // API 키 로드 완료 (보안상 로그 출력 제거)
     }
 
     // Gemini generateContent 호출
     public GeminiResponse generateContent(String model, GeminiRequest request) {
-
-        // 2. 실제 요청 직전에 다시 한 번 출력
-        log.debug("Gemini API Key used for request: {}...", apiKey.substring(0, Math.min(10, apiKey.length())));
 
         // burst limit 방지 - 2초 대기
         try {
