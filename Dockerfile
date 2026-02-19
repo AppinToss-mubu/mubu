@@ -2,7 +2,7 @@ FROM gradle:8.7-jdk17 AS build
 WORKDIR /app
 
 COPY gradle gradle
-COPY gradlew build.gradle settings.gradle gradle.properties ./
+COPY gradlew build.gradle settings.gradle ./
 RUN chmod +x gradlew
 
 COPY src src
