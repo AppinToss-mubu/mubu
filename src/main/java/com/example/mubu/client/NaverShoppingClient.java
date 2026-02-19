@@ -1,6 +1,8 @@
 package com.example.mubu.client;
 
 import com.example.mubu.dto.naver.NaverShoppingResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +15,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 public class NaverShoppingClient {
 
+    private static final Logger log = LoggerFactory.getLogger(NaverShoppingClient.class);
+
     private static final String BASE_URL =
             "https://openapi.naver.com/v1/search/shop.json";
 
@@ -21,10 +25,11 @@ public class NaverShoppingClient {
     private final String clientSecret;
 
     public NaverShoppingClient(
+            RestTemplate restTemplate,
             @Value("${mubu.naver.client-id}") String clientId,
             @Value("${mubu.naver.client-secret}") String clientSecret
     ) {
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplate;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
     }

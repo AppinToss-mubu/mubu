@@ -1,6 +1,9 @@
 package com.example.mubu.client;
 
 import com.example.mubu.dto.gemini.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -18,6 +21,8 @@ import org.springframework.web.client.RestTemplate;
 @Component
 public class GeminiClient {
 
+    private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
+
     private final RestTemplate restTemplate;
     private final String apiKey;
 
@@ -25,25 +30,22 @@ public class GeminiClient {
     private static final String BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models";
 
-    public GeminiClient(@Value("${mubu.ai.gemini.api-key}") String apiKey) {
+    public GeminiClient(
+            @Qualifier("geminiRestTemplate") RestTemplate restTemplate,
+            @Value("${mubu.ai.gemini.api-key}") String apiKey
+    ) {
+        this.restTemplate = restTemplate;
         this.apiKey = apiKey;
-        this.restTemplate = new RestTemplate();
 
         // 1. 애플리케이션 시작 시점에 한 번 출력
-        System.out.println(
-                "Gemini API Key loaded: " +
-                        apiKey.substring(0, 10) + "..."
-        );
+        log.info("Gemini API Key loaded: {}...", apiKey.substring(0, Math.min(10, apiKey.length())));
     }
 
     // Gemini generateContent 호출
     public GeminiResponse generateContent(String model, GeminiRequest request) {
 
         // 2. 실제 요청 직전에 다시 한 번 출력
-        System.out.println(
-                "Gemini API Key used for request: " +
-                        apiKey.substring(0, 10) + "..."
-        );
+        log.debug("Gemini API Key used for request: {}...", apiKey.substring(0, Math.min(10, apiKey.length())));
 
         // burst limit 방지 - 2초 대기
         try {
@@ -73,9 +75,7 @@ public class GeminiClient {
                 if (e.getStatusCode().value() == 429) {
                     if (i < maxRetries - 1) {
                         int waitTime = (i + 1) * 5000; // 5초, 10초, 15초 대기
-                        System.out.println(
-                                "429 에러 발생. " + waitTime + "ms 후 재시도 (" + (i + 1) + "/" + maxRetries + ")"
-                        );
+                        log.warn("429 에러 발생. {}ms 후 재시도 ({}/{})", waitTime, i + 1, maxRetries);
                         try {
                             Thread.sleep(waitTime);
                         } catch (InterruptedException ie) {
@@ -83,7 +83,7 @@ public class GeminiClient {
                             throw new RuntimeException("재시도 대기 중 인터럽트 발생", ie);
                         }
                     } else {
-                        System.out.println("최대 재시도 횟수 초과. 429 에러를 다시 던집니다.");
+                        log.error("최대 재시도 횟수 초과. 429 에러를 다시 던집니다.");
                         throw e;
                     }
                 } else {
