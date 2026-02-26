@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 //title HTML 제거
@@ -129,11 +131,63 @@ public class NaverShoppingService {
                 .orElse(null);
     }
 
-    // HTML 태그 제거 + 앱 딥링크를 웹 URL로 정규화 (토스 인앱 등에서 웹만 열 수 있도록)
+    // HTML 태그 제거 + 앱 딥링크를 웹 URL로 정규화 + 묶음 단가 계산
     private NaverShoppingItem sanitizeItem(NaverShoppingItem item) {
-        item.setTitle(item.getTitle().replaceAll("<[^>]*>", ""));
+        String cleanTitle = item.getTitle().replaceAll("<[^>]*>", "");
+        item.setTitle(cleanTitle);
         item.setLink(MallLinkUtils.normalizeToWebUrl(item.getLink()));
+
+        // 묶음/세트 상품인 경우 단가 계산
+        int bundleQty = extractBundleQuantity(cleanTitle);
+        if (bundleQty > 1) {
+            int originalPrice = parsePrice(item.getLprice());
+            if (originalPrice > 0) {
+                int unitPrice = originalPrice / bundleQty;
+                System.out.println("[NAVER_SEARCH] 묶음 감지: " + cleanTitle +
+                        " → " + bundleQty + "개, 원가=" + originalPrice + ", 단가=" + unitPrice);
+                item.setLprice(String.valueOf(unitPrice));
+            }
+        }
+
         return item;
+    }
+
+    /**
+     * 상품명에서 묶음 수량을 추출한다.
+     * 패턴: "3개입", "3개세트", "3팩", "3P", "3EA", "x3", "X3" 등
+     * 1개 또는 인식 불가 시 1을 반환한다.
+     */
+    private int extractBundleQuantity(String title) {
+        if (title == null || title.isEmpty()) return 1;
+
+        // 패턴 목록 (우선순위 높은 것부터)
+        Pattern[] patterns = {
+                Pattern.compile("(\\d+)\\s*개입"),
+                Pattern.compile("(\\d+)\\s*개\\s*세트"),
+                Pattern.compile("(\\d+)\\s*개\\s*묶음"),
+                Pattern.compile("(\\d+)\\s*팩"),
+                Pattern.compile("(\\d+)\\s*[Pp](?![a-zA-Z])"),   // "3P" but not "3Plus"
+                Pattern.compile("(\\d+)\\s*[Ee][Aa]"),             // "3EA"
+                Pattern.compile("[xX](\\d+)(?![a-zA-Z])"),         // "x3", "X3"
+                Pattern.compile("(\\d+)\\s*세트"),
+                Pattern.compile("(\\d+)\\s*입"),
+                Pattern.compile("(\\d+)\\s*매\\s*입"),
+                Pattern.compile("(\\d+)\\s*매"),
+        };
+
+        for (Pattern p : patterns) {
+            Matcher m = p.matcher(title);
+            if (m.find()) {
+                try {
+                    int qty = Integer.parseInt(m.group(1));
+                    if (qty >= 2 && qty <= 100) {
+                        return qty;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        return 1;
     }
 
     // Title에서 HTML 태그 제거 (문자열만 반환)
