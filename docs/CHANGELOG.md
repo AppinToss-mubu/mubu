@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-02-27
+
+### Improved
+- 묶음/세트 상품 단가 계산 로직 추가 (개입, 개세트, 팩, P, EA, xN 등 패턴 감지 → 단가 자동 환산)
+
 ## [1.0.0] - 2026-02-25
 
 ### Released
