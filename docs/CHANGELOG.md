@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - 묶음/세트 상품 단가 계산 로직 추가 (개입, 개세트, 팩, P, EA, xN 등 패턴 감지 → 단가 자동 환산)
+- AI 프롬프트 v2: searchKeywordKr 작성 규칙 강화, 5개 카테고리 예시 추가 (치약/과자/선크림/게임컨/감자칩)
+- 네이버 쇼핑 관련성 필터 개선: 첫 키워드만 체크 → 전체 키워드 매칭 점수 기반 선택
+
+### Added
+- NaverShoppingService 단위 테스트 10개 (키워드 매칭, 묶음 단가, Fallback, HTML 제거)
+- GeminiAnalyzeResult 파싱 단위 테스트 8개 (프롬프트 응답, 12개 통화, 엣지 케이스)
 
 ## [1.0.0] - 2026-02-25
 
