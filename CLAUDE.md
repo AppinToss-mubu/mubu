@@ -79,11 +79,25 @@ NAVER_CLIENT_SECRET # 네이버 쇼핑 API Client Secret
 
 ## 유지보수 워크플로우
 
+### Git 브랜치 전략
+```
+main (출시된 안정 버전, 릴리즈 태그 부착)
+  └── dev (다음 릴리즈 통합 브랜치)
+        ├── fix/#이슈번호-설명
+        ├── feat/#이슈번호-설명
+        └── improve/#이슈번호-설명
+```
+- `main`: 현재 출시된 코드. 직접 커밋 금지. `dev` → `main` PR 머지로만 업데이트
+- `dev`: 이슈 브랜치들이 모이는 통합 브랜치
+- 이슈 브랜치: `dev`에서 분기 → 작업 → `dev`로 PR 머지
+- 릴리즈 흐름: 이슈 브랜치 → dev 머지 → dev에서 테스트 → dev → main PR = 릴리즈
+- 롤백: dev에서 특정 머지 커밋 `git revert`, main은 태그 기반 롤백, Fly.io는 `fly deploy --image`
+
 ### GitHub Issues 기반 작업
 - 라벨: `bug`, `enhancement`, `infra`
 - 이슈 하나 = 브랜치 하나 = PR 하나
 
-### 브랜치 규칙
+### 브랜치 네이밍
 - `fix/#이슈번호-간단설명` (버그)
 - `feat/#이슈번호-간단설명` (기능)
 - `improve/#이슈번호-간단설명` (개선)
