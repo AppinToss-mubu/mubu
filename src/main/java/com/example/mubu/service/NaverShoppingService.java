@@ -6,6 +6,7 @@ import com.example.mubu.dto.naver.NaverShoppingItem;
 import com.example.mubu.dto.naver.NaverShoppingResponse;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -83,7 +84,7 @@ public class NaverShoppingService {
         return null;
     }
 
-    // 실제 검색 로직 (관련성 필터링 포함)
+    // 실제 검색 로직 (키워드 매칭 점수 기반 관련성 필터링)
     private NaverShoppingItem searchWithQuery(String query, String firstKeyword) {
         // 네이버 쇼핑 API 호출 - 관련도순(sim)으로 검색
         NaverShoppingResponse response =
@@ -105,17 +106,13 @@ public class NaverShoppingService {
             System.out.println("[NAVER_SEARCH] 첫 번째 아이템 - title: " + firstItem.getTitle() + ", lprice: " + firstItem.getLprice());
         }
 
-        // 1. 관련 상품만 필터링 (첫 번째 키워드가 포함된 것만)
+        String[] keywords = query.split("\\s+");
+
+        // 1. 유효 가격 + 최소 1개 키워드 매칭 필터링
         List<NaverShoppingItem> relevantItems = response.getItems().stream()
                 .filter(item -> item.getLprice() != null && !item.getLprice().isBlank())
                 .filter(item -> parsePrice(item.getLprice()) > 0)
-                .filter(item -> {
-                    if (firstKeyword == null || firstKeyword.length() <= 1) {
-                        return true;
-                    }
-                    String title = sanitizeTitle(item.getTitle()).toLowerCase();
-                    return title.contains(firstKeyword.toLowerCase());
-                })
+                .filter(item -> countKeywordMatches(item, keywords) > 0)
                 .toList();
 
         System.out.println("[NAVER_SEARCH] 관련성 있는 아이템 수: " + relevantItems.size());
@@ -124,11 +121,27 @@ public class NaverShoppingService {
             return null;
         }
 
-        // 2. 관련 상품 중 최저가 선택
+        // 2. 가장 관련성 높은 상품(키워드 매칭 수 최대) 중 최저가 선택
+        int maxMatches = relevantItems.stream()
+                .mapToInt(item -> countKeywordMatches(item, keywords))
+                .max().orElse(0);
+
+        System.out.println("[NAVER_SEARCH] 최대 키워드 매칭 수: " + maxMatches);
+
         return relevantItems.stream()
+                .filter(item -> countKeywordMatches(item, keywords) == maxMatches)
                 .min(Comparator.comparingInt(item -> parsePrice(item.getLprice())))
                 .map(this::sanitizeItem)
                 .orElse(null);
+    }
+
+    // 상품 타이틀에 검색 키워드가 몇 개 포함되는지 카운트
+    private int countKeywordMatches(NaverShoppingItem item, String[] keywords) {
+        String title = sanitizeTitle(item.getTitle()).toLowerCase();
+        return (int) Arrays.stream(keywords)
+                .filter(k -> k.length() > 1)
+                .filter(k -> title.contains(k.toLowerCase()))
+                .count();
     }
 
     // HTML 태그 제거 + 앱 딥링크를 웹 URL로 정규화 + 묶음 단가 계산
